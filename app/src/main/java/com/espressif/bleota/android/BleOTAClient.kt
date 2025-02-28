@@ -3,7 +3,6 @@ package com.espressif.bleota.android
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.util.Log
 import com.espressif.bleota.android.message.BleOTAMessage
@@ -55,9 +54,7 @@ class BleOTAClient(
     var gatt: BluetoothGatt? = null
     var service: BluetoothGattService? = null
     var recvFwChar: BluetoothGattCharacteristic? = null
-    var progressChar: BluetoothGattCharacteristic? = null
     var commandChar: BluetoothGattCharacteristic? = null
-    var customerChar: BluetoothGattCharacteristic? = null
 
     private var nextNotifyChar: BluetoothGattCharacteristic? = null
 
@@ -164,18 +161,10 @@ class BleOTAClient(
                 recvFwChar
             }
             recvFwChar -> {
-                nextNotifyChar = progressChar
-                progressChar
-            }
-            progressChar -> {
                 nextNotifyChar = commandChar
                 commandChar
             }
             commandChar -> {
-                nextNotifyChar = customerChar
-                customerChar
-            }
-            customerChar -> {
                 null
             }
             else -> {
@@ -283,6 +272,7 @@ class BleOTAClient(
             when (ackStatus) {
                 BIN_ACK_SUCCESS -> {
                     postNextPacket()
+                    callback?.onProgress(data[6].toInt())
                 }
                 BIN_ACK_CRC_ERROR -> {
                     callback?.onError(2)
@@ -360,6 +350,9 @@ class BleOTAClient(
         open fun onError(code: Int) {
         }
 
+        open fun onProgress(progress: Int) {
+        }
+
         open fun onOTA(message: BleOTAMessage) {
         }
 
@@ -388,22 +381,14 @@ class BleOTAClient(
             val recvFwChar = service?.getCharacteristic(CHAR_RECV_FW_UUID)?.also {
                 gatt.setCharacteristicNotification(it, true)
             }
-            val progressChar = service?.getCharacteristic(CHAR_PROGRESS_UUID)?.also {
-                gatt.setCharacteristicNotification(it, true)
-            }
             val commandChar = service.getCharacteristic(CHAR_COMMAND_UUID)?.also {
-                gatt.setCharacteristicNotification(it, true)
-            }
-            val customerChar = service?.getCharacteristic(CHAR_CUSTOMER_UUID)?.also {
                 gatt.setCharacteristicNotification(it, true)
             }
 
             client?.also {
                 it.service = service
                 it.recvFwChar = recvFwChar
-                it.progressChar = progressChar
                 it.commandChar = commandChar
-                it.customerChar = customerChar
             }
         }
 
@@ -452,12 +437,8 @@ class BleOTAClient(
                 client?.recvFwChar -> {
                     client?.parseSectorAck(characteristic.value)
                 }
-                client?.progressChar -> {
-                }
                 client?.commandChar -> {
                     client?.parseCommandPacket()
-                }
-                client?.customerChar -> {
                 }
             }
         }

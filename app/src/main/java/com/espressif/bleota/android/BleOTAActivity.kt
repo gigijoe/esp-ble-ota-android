@@ -102,6 +102,14 @@ class BleOTAActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateProgress(message: String) {
+        runOnUiThread {
+            mStatusList.add(message)
+            mBinding.recyclerView.scrollToPosition(mStatusList.lastIndex)
+            mBinding.otaBtn.isEnabled = false
+        }
+    }
+
     private inner class StatusHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val text1: TextView = itemView.findViewById(android.R.id.text1)
     }
@@ -164,16 +172,8 @@ class BleOTAActivity : AppCompatActivity() {
                 updateStatus("Discover FW CHAR failed", false)
                 return
             }
-            if (mOtaClient?.progressChar == null) {
-                updateStatus("Discover PROGRESS CHAR failed", false)
-                return
-            }
             if (mOtaClient?.commandChar == null) {
                 updateStatus("Discover COMMAND CHAR failed", false)
-                return
-            }
-            if (mOtaClient?.customerChar == null) {
-                updateStatus("Discover CUSTOMER CHAR failed", false)
                 return
             }
 
@@ -226,6 +226,10 @@ class BleOTAActivity : AppCompatActivity() {
 
         override fun onError(code: Int) {
             updateStatus("Error: $code", false)
+        }
+
+        override fun onProgress(progress: Int) {
+            updateProgress("Progress " + progress + "%");
         }
     }
 }
